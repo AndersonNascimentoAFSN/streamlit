@@ -11,3 +11,8 @@ pip install -r requirements.txt
 # Executar streamlit:
 streamlit run main.py
 
+# Classes:
+## https://www.youtube.com/watch?v=NsjA-c8596k&t=515s
+## https://www.youtube.com/watch?v=fUuBo759oqg
+## https://www.youtube.com/watch?v=AbQxNUvjwv8
+## https://www.youtube.com/watch?v=KPiYg4-kFzE
