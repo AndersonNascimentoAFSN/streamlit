@@ -16,8 +16,24 @@ def load_data(businesses):
     quotes_action = quotes_action["Close"]
     return quotes_action
 
+@st.cache_data
+def load_tickers_quotes():
+    base_tickers = pd.read_csv(
+      "data/IBOV.csv",
+      sep=";",
+      encoding='latin1',
+      engine='python',
+      skipinitialspace=True,  # Remove espaços extras
+      on_bad_lines='skip'  # Ignora linhas mal formatadas
+    )
+    base_tickers.columns = base_tickers.columns.str.strip()
+    first_column = base_tickers.iloc[:, 0].map(lambda x: x.strip() if isinstance(x, str) else x)
+    tickers = list(first_column)
+    tickers = [str(item) + ".SA" for item in tickers]
+    return tickers
+
 # "ITUB4.SA" SA = São Paulo
-quotes = ["ITUB4.SA", "PETR4.SA", "MGLU3.SA", "VALE3.SA", "ABV3.SA", "GGBR4.SA"]
+quotes = load_tickers_quotes()
 data = load_data(quotes)
 
 # Criar a interface do streamlit:
@@ -57,3 +73,48 @@ data = data.loc[date_interval[0]:date_interval[1]]
 # Criar gráfico
 st.line_chart(data)
 
+
+# Cálculo de performance
+text_performance_quotes = ""
+
+if len(list_quotes_selected) == 0:
+    list_quotes_selected = list(data.columns)
+elif len(list_quotes_selected) == 1:
+    data = data.rename(columns={"Close": unique_data})
+
+wallet = [1000 for quotes in list_quotes_selected]
+total_start_wallet = sum([item for item in wallet if pd.notna(item)])
+
+for index, quotes in enumerate(list_quotes_selected):
+    # Formatação de cor em markdown :color[text]
+    performance_quotes = data[quotes].iloc[-1] / data[quotes].iloc[0] - 1
+    performance_quotes = float(performance_quotes)
+
+    wallet[index] = wallet[index] * (1 + performance_quotes)
+
+    if performance_quotes > 0:
+        text_performance_quotes = text_performance_quotes + f"{quotes}: :green[{performance_quotes:.1%}]  \n"
+    elif performance_quotes < 0:
+        text_performance_quotes = text_performance_quotes + f"{quotes}: :red[{performance_quotes:.1%}]  \n"
+    else:
+      text_performance_quotes = text_performance_quotes + f"{quotes}: {performance_quotes:.1%}  \n"
+
+total_end_wallet = sum([item for item in wallet if pd.notna(item)])
+
+wallet_performance = total_end_wallet / total_start_wallet  - 1
+
+if wallet_performance > 0:
+  text_performance_wallet = f"Performance da carteira com todos os ativos: :green[{wallet_performance:.1%}]  \n"
+elif performance_quotes < 0:
+  text_performance_wallet = f"Performance da carteira com todos os ativos: :red[{wallet_performance:.1%}]  \n"
+else:
+  text_performance_wallet = f"Performance da carteira com todos os ativos: {wallet_performance:.1%}  \n"
+
+st.write(f"""
+### Perfomance dos ativos
+Essa foi a performance de cada ativo no período selecionado:  
+
+{text_performance_quotes}
+
+{text_performance_wallet}
+""") # markdown
